@@ -21,6 +21,7 @@ module-name = ["racing", "controllers"]
 
 [dependency-groups]
 dev = [
+    "cma>=4.4.4",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
