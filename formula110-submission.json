@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "controller": "controllers.cmaes_neuroevolution",
+  "module": "controllers.cmaes_neuroevolution",
+  "control_function": "control",
+  "factory_function": "create_controller"
+}
