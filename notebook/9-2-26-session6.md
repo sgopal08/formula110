@@ -1,6 +1,6 @@
 ## Laboratory Notebook 6
 
-**Date and time:** 9/9/26
+**Date and time:** 9/2/26
 
 **Participants and contributions:** Sanjana
 
