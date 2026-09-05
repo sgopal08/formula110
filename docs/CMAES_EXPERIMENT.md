@@ -52,6 +52,21 @@ uv run racing --seed 110 --student-module controllers.cmaes_neuroevolution
 The export path is relative to the controller module, so it remains valid when
 the complete controller directory is packaged.
 
+## Racing-line refinement
+
+`controllers.cmaes_racing_line` contains the speed-refined experiment. It uses
+an aggressive CMA-ES policy trained from the original champion with a smaller
+sigma and a speed-focused fitness. A deterministic safety shield switches to
+the preserved safe champion whenever any of the seven wall-only LiDAR beams is
+closer than 1.8 meters. Keeping both policies fixed makes the shield stateless
+and inexpensive at inference time.
+
+Run it with:
+
+```bash
+uv run racing --seed 110 --student-module controllers.cmaes_racing_line
+```
+
 ## Fitness
 
 Per-seed fitness primarily rewards forward partial laps, with a modest bonus

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from importlib import import_module
 from math import sqrt
@@ -31,6 +31,7 @@ from racing.race.runtime import (
     update_race_runtime_after_step,
 )
 from racing.race.sensors import build_robot_sensors
+from racing.student.api import RobotController
 
 FIXED_DELTA_SECONDS = 1.0 / 60.0
 
@@ -85,6 +86,10 @@ class HeadlessPolicyEvaluator:
         self.close()
 
     def evaluate(self, parameters: Sequence[float], *, seed: int, seconds: float) -> TrialMetrics:
+        return self.evaluate_controller(FixedMLPPolicy(parameters), seed=seed, seconds=seconds)
+
+    def evaluate_controller(self, policy: RobotController, *, seed: int, seconds: float) -> TrialMetrics:
+        """Evaluate any public controller with the same isolated trial machinery."""
         if seconds <= 0.0:
             raise ValueError("trial duration must be positive")
         self._trial_index += 1
@@ -114,7 +119,6 @@ class HeadlessPolicyEvaluator:
                 robot=robot,
                 tracker=lap_progress_tracker_for_spawn_pose(model=model, spawn_pose=spawn_pose),
             )
-            policy = FixedMLPPolicy(parameters)
             elapsed_seconds = 0.0
             while elapsed_seconds < seconds:
                 if not robot_is_eliminated(robot):
@@ -191,11 +195,33 @@ def trial_score(metrics: TrialMetrics) -> float:
     )
 
 
-def aggregate_fitness(trials: Sequence[TrialMetrics]) -> FitnessResult:
+def racing_line_trial_score(metrics: TrialMetrics) -> float:
+    """Prioritize fast progress, but make contact and damage unacceptable tradeoffs."""
+    duration = max(metrics.elapsed_seconds, FIXED_DELTA_SECONDS)
+    lap_bonus = 0.0
+    if metrics.first_lap_time_seconds is not None:
+        lap_bonus = 0.75 * max(0.0, 1.0 - metrics.first_lap_time_seconds / duration)
+    elimination = 1.0 if metrics.eliminated else 0.0
+    return (
+        metrics.partial_laps
+        + lap_bonus
+        + (0.1 if metrics.survived else 0.0)
+        - 0.5 * metrics.off_track_seconds / duration
+        - 3.0 * metrics.wall_contact_seconds / duration
+        - 5.0 * metrics.damage
+        - 5.0 * elimination
+    )
+
+
+def aggregate_fitness(
+    trials: Sequence[TrialMetrics],
+    *,
+    score_function: Callable[[TrialMetrics], float] = trial_score,
+) -> FitnessResult:
     """Emphasize the worst seed and penalize inconsistent controllers."""
     if not trials:
         raise ValueError("fitness requires at least one trial")
-    scores = tuple(trial_score(trial) for trial in trials)
+    scores = tuple(score_function(trial) for trial in trials)
     mean_score = sum(scores) / len(scores)
     variance = sum((score - mean_score) ** 2 for score in scores) / len(scores)
     score_stddev = sqrt(variance)

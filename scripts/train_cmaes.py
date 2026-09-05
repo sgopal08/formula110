@@ -14,7 +14,12 @@ from typing import Any, cast
 import cma  # pyright: ignore[reportMissingImports]
 
 from controllers.cmaes_policy import PARAMETER_COUNT, initial_parameters
-from racing.experiments.neuroevolution import HeadlessPolicyEvaluator, TrialMetrics, aggregate_fitness
+from racing.experiments.neuroevolution import (
+    HeadlessPolicyEvaluator,
+    TrialMetrics,
+    aggregate_fitness,
+    racing_line_trial_score,
+)
 
 DEFAULT_TRAINING_SEEDS = (17, 83, 241)
 DEFAULT_VALIDATION_SEEDS = (41, 137, 311, 509, 887)
@@ -30,6 +35,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--validate-every", type=int, default=5)
     parser.add_argument("--optimizer-seed", type=int, default=110)
     parser.add_argument("--sigma", type=float, default=0.35)
+    parser.add_argument(
+        "--initial-weights",
+        type=Path,
+        default=None,
+        help="Initialize CMA-ES around parameters from a saved JSON artifact.",
+    )
+    parser.add_argument("--fitness-profile", choices=("balanced", "racing-line"), default="balanced")
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/cmaes"))
     parser.add_argument(
         "--export-controller-weights",
@@ -67,9 +79,23 @@ def _evaluate_parameters(
     *,
     seeds: Sequence[int],
     seconds: float,
+    fitness_profile: str,
 ) -> tuple[tuple[TrialMetrics, ...], float]:
     trials = tuple(evaluator.evaluate(parameters, seed=seed, seconds=seconds) for seed in seeds)
-    return trials, aggregate_fitness(trials).fitness
+    score_function = racing_line_trial_score if fitness_profile == "racing-line" else None
+    if score_function is None:
+        return trials, aggregate_fitness(trials).fitness
+    return trials, aggregate_fitness(trials, score_function=score_function).fitness
+
+
+def _load_initial_parameters(path: Path | None) -> tuple[float, ...]:
+    if path is None:
+        return initial_parameters()
+    payload = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+    parameters = tuple(float(value) for value in cast(list[float], payload["parameters"]))
+    if len(parameters) != PARAMETER_COUNT:
+        raise ValueError(f"expected {PARAMETER_COUNT} initial parameters, got {len(parameters)}")
+    return parameters
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -114,7 +140,8 @@ def main() -> None:
         "verbose": -9,
     }
     cma_module = cast(Any, cma)
-    strategy: Any = cma_module.CMAEvolutionStrategy(list(initial_parameters()), float(args.sigma), options)
+    starting_parameters = _load_initial_parameters(cast(Path | None, args.initial_weights))
+    strategy: Any = cma_module.CMAEvolutionStrategy(list(starting_parameters), float(args.sigma), options)
     best_parameters: list[float] | None = None
     best_fitness = float("-inf")
     best_generation = 0
@@ -129,11 +156,31 @@ def main() -> None:
         "validate_every": args.validate_every,
         "optimizer_seed": args.optimizer_seed,
         "sigma": args.sigma,
+        "initial_weights": str(args.initial_weights) if args.initial_weights is not None else None,
+        "fitness_profile": args.fitness_profile,
         "parameter_count": PARAMETER_COUNT,
     }
     _write_json(output_dir / "configuration.json", configuration)
 
     with HeadlessPolicyEvaluator() as evaluator:
+        initial_trials, initial_fitness = _evaluate_parameters(
+            evaluator,
+            starting_parameters,
+            seeds=args.training_seeds,
+            seconds=float(args.seconds),
+            fitness_profile=str(args.fitness_profile),
+        )
+        best_parameters = list(starting_parameters)
+        best_fitness = initial_fitness
+        _append_jsonl(
+            metrics_path,
+            {
+                "record_type": "initial_mean",
+                "checksum": _parameter_checksum(starting_parameters),
+                "fitness": initial_fitness,
+                "trials": [trial.to_dict() for trial in initial_trials],
+            },
+        )
         for generation in range(1, int(args.generations) + 1):
             population = cast(list[Sequence[float]], strategy.ask())
             objective_values: list[float] = []
@@ -145,6 +192,7 @@ def main() -> None:
                     parameters,
                     seeds=args.training_seeds,
                     seconds=float(args.seconds),
+                    fitness_profile=str(args.fitness_profile),
                 )
                 objective_values.append(-fitness)  # pycma minimizes.
                 record: dict[str, object] = {
@@ -153,6 +201,7 @@ def main() -> None:
                     "individual": individual_index,
                     "checksum": _parameter_checksum(parameters),
                     "fitness": fitness,
+                    "parameters": parameters,
                     "trials": [trial.to_dict() for trial in trials],
                 }
                 generation_records.append(record)
@@ -180,6 +229,7 @@ def main() -> None:
                     best_parameters,
                     seeds=args.validation_seeds,
                     seconds=float(args.seconds),
+                    fitness_profile=str(args.fitness_profile),
                 )
                 summary["validation_fitness"] = validation_fitness
                 summary["validation_trials"] = [trial.to_dict() for trial in validation_trials]

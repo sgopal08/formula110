@@ -12,8 +12,15 @@ from controllers.cmaes_policy import (
     initial_parameters,
     observation_vector,
 )
+from controllers.cmaes_racing_line import RacingLineController
 from racing import CameraSensors, ImuSensors, LidarSensors, OdometrySensors, RobotSensors
-from racing.experiments.neuroevolution import FitnessResult, TrialMetrics, aggregate_fitness, trial_score
+from racing.experiments.neuroevolution import (
+    FitnessResult,
+    TrialMetrics,
+    aggregate_fitness,
+    racing_line_trial_score,
+    trial_score,
+)
 
 
 def test_policy_shape_and_output_bounds() -> None:
@@ -88,3 +95,19 @@ def test_aggregate_fitness_penalizes_one_catastrophic_seed() -> None:
 
     assert consistent.fitness > brittle.fitness
     assert brittle.minimum_score < consistent.minimum_score
+
+
+def test_racing_line_fitness_prefers_safe_speed_over_a_faster_crash() -> None:
+    safe = _metrics(progress=1.0)
+    faster_crash = _metrics(progress=2.0, damage=1.0, eliminated=True)
+
+    assert racing_line_trial_score(safe) > racing_line_trial_score(faster_crash)
+
+
+def test_racing_line_controller_returns_bounded_commands_near_a_wall() -> None:
+    sensors = RobotSensors(wall_lidar=LidarSensors(distances_m=(0.5, inf, inf, inf, inf, inf, inf)))
+
+    command = RacingLineController()(sensors)
+
+    assert -1.0 <= command.steer <= 1.0
+    assert 0.0 <= command.throttle <= 1.0
