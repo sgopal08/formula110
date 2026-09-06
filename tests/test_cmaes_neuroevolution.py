@@ -12,7 +12,7 @@ from controllers.cmaes_policy import (
     initial_parameters,
     observation_vector,
 )
-from controllers.cmaes_racing_line import RacingLineController
+from controllers.cmaes_v2 import RacingLineController
 from racing import CameraSensors, ImuSensors, LidarSensors, OdometrySensors, RobotSensors
 from racing.experiments.neuroevolution import (
     FitnessResult,

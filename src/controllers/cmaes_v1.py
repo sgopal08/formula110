@@ -13,7 +13,7 @@ RACING_COLOR: str = "#A855F7"
 
 
 def _load_parameters() -> tuple[float, ...]:
-    artifact_path = Path(__file__).with_name("cmaes_weights.json")
+    artifact_path = Path(__file__).with_name("cmaes_v1_weights.json")
     if not artifact_path.exists():
         return initial_parameters()
     payload = cast(dict[str, object], json.loads(artifact_path.read_text(encoding="utf-8")))

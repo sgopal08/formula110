@@ -4,7 +4,7 @@
     "champion_generation": 14,
     "fitness_profile": "racing-line",
     "generations": 15,
-    "initial_weights": "src/controllers/cmaes_weights_pre_racing_line.json",
+    "initial_weights": "src/controllers/cmaes_v1_weights.json",
     "optimizer_seed": 20260901,
     "parameter_count": 122,
     "population_size": 16,

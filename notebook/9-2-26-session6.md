@@ -33,12 +33,12 @@ The lower off-track weight intentionally allowed the optimizer to use more of th
 
 The raw generation-14 champion was substantially faster, but it caused minor wall contact and damage on two fresh validation seeds. We rejected that controller as the final policy. Interpolating between the safe and aggressive neural weights was also tested, but this was unsuccessful because neural-network behavior changed nonlinearly and the interpolated policies still contacted walls.
 
-We then created a hybrid controller called `cmaes_racing_line`. The aggressive evolved policy drives normally, but the preserved safe CMA-ES policy takes over whenever any of seven wall-only LiDAR beams detects a wall within 1.8 meters. The safety check uses beams at `-90`, `-45`, `-20`, `0`, `20`, `45`, and `90` degrees.
+We then created a hybrid controller called `cmaes_v2` (formerly `cmaes_racing_line`). The aggressive evolved policy drives normally, but the preserved safe CMA-ES policy takes over whenever any of seven wall-only LiDAR beams detects a wall within 1.8 meters. The safety check uses beams at `-90`, `-45`, `-20`, `0`, `20`, `45`, and `90` degrees.
 
 ## Evidence
 
 - **AI-agent assistance:** Added saved-weight initialization, implemented the racing-line fitness, ran the 1,680-trial CMA-ES refinement, analyzed unsafe candidates, tested weight interpolation, designed the LiDAR safety shield, ran broad held-out validation, and verified the final controller through the isolated grading worker.
-- **Commits or code:** Added `src/controllers/cmaes_racing_line.py`, `src/controllers/cmaes_racing_line_weights.json`, and `src/controllers/cmaes_weights_pre_racing_line.json`. Updated `scripts/train_cmaes.py`, `src/racing/experiments/neuroevolution.py`, `tests/test_cmaes_neuroevolution.py`, and `docs/CMAES_EXPERIMENT.md`. No commit hash was available during this session.
+- **Commits or code:** Added `src/controllers/cmaes_v2.py`, `src/controllers/cmaes_v2_weights.json`, and `src/controllers/cmaes_v1_weights.json` (formerly the racing-line and pre-racing-line filenames). Updated `scripts/train_cmaes.py`, `src/racing/experiments/neuroevolution.py`, `tests/test_cmaes_neuroevolution.py`, and `docs/CMAES_EXPERIMENT.md`.
 - **Experiment configuration:** 16 population members, 15 generations, 7 training seeds, 5 fresh validation seeds, 30-second trials, 60 Hz, initial sigma 0.10, optimizer seed 20260901, and marshal recovery disabled.
 - **Experiment output:** The best refinement score increased to `3.2391` at generation 14. Detailed results were saved under `artifacts/cmaes-racing-line/`, including `candidate_weights.json` and `broad-validation.json`.
 - **Verification:** The final hybrid completed 17/17 broad-validation runs with two laps, zero damage, zero wall contact, and zero eliminations. The full repository test suite passed with 119 tests, and the changed files passed Ruff and strict Pyright checks.
@@ -57,9 +57,9 @@ The hybrid did use the track more aggressively. It accumulated 6.45 seconds off-
 
 ## Decision and rationale
 
-We selected the hybrid `cmaes_racing_line` controller rather than the unprotected racing-line champion. The raw champion was faster, but its damage on unseen seeds violated the primary safety requirement. The hybrid retained a meaningful portion of the speed improvement and achieved zero damage and wall contact across a substantially broader test set.
+We selected the hybrid `cmaes_v2` controller rather than the unprotected racing-line champion. The raw champion was faster, but its damage on unseen seeds violated the primary safety requirement. The hybrid retained a meaningful portion of the speed improvement and achieved zero damage and wall contact across a substantially broader test set.
 
-The original controller was not overwritten. Its weights were preserved as `cmaes_weights_pre_racing_line.json`, allowing direct comparisons and providing the safety fallback. This decision also makes the contribution of each component clear: the aggressive policy selects the faster racing line, while the safe policy handles states close to track boundaries.
+The original controller was not overwritten. Its weights were preserved as `cmaes_v1_weights.json`, allowing direct comparisons and providing the safety fallback. This decision also makes the contribution of each component clear: the aggressive policy selects the faster racing line, while the safe policy handles states close to track boundaries.
 
 ## Next steps
 
