@@ -25,7 +25,9 @@ def controller_module_name(value: str) -> str:
 
 def module_source(module_name: str) -> Path:
     """Resolve one controller module to its project source file."""
-    return SOURCE_ROOT.joinpath(*module_name.split(".")).with_suffix(".py")
+    module_path = SOURCE_ROOT.joinpath(*module_name.split(".")).with_suffix(".py")
+    package_path = SOURCE_ROOT.joinpath(*module_name.split(".")) / "__init__.py"
+    return package_path if package_path.is_file() else module_path
 
 
 def selected_sources(module_names: tuple[str, ...], *, all_controllers: bool) -> tuple[Path, ...]:

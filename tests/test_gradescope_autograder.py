@@ -161,11 +161,55 @@ def test_export_selected_controller_includes_local_python_dependencies(
         } <= names
 
 
+def test_export_selected_controller_follows_local_controller_packages(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    exporter = load_exporter()
+    source_root = tmp_path / "src"
+    controllers_root = source_root / "controllers"
+    helper_package = controllers_root / "helper"
+    helper_package.mkdir(parents=True)
+    (controllers_root / "__init__.py").write_text("", encoding="utf-8")
+    (controllers_root / "main.py").write_text("from controllers.helper import VALUE\n", encoding="utf-8")
+    (helper_package / "__init__.py").write_text("from controllers.helper.value import VALUE\n", encoding="utf-8")
+    (helper_package / "value.py").write_text("VALUE: int = 1\n", encoding="utf-8")
+    output = tmp_path / "submission.zip"
+    monkeypatch.setattr(exporter, "SOURCE_ROOT", source_root)
+    monkeypatch.setattr(exporter, "CONTROLLERS_ROOT", controllers_root)
+
+    exporter.export_controllers(("controllers.main",), output)
+
+    with zipfile.ZipFile(output) as archive:
+        assert set(archive.namelist()) == {
+            "controllers/__init__.py",
+            "controllers/helper/__init__.py",
+            "controllers/helper/value.py",
+            "controllers/main.py",
+        }
+
+
 def test_export_student_controllers_reports_missing_module(tmp_path: Path) -> None:
     exporter = load_exporter()
 
     with pytest.raises(FileNotFoundError, match="not found"):
         exporter.export_controllers(("controllers.does_not_exist",), tmp_path / "submission.zip")
+
+
+def test_export_centerline_v4_includes_nested_helpers_and_parameters(tmp_path: Path) -> None:
+    exporter = load_exporter()
+    output = tmp_path / "centerline-v4.zip"
+
+    exporter.export_controllers(("controllers.centerline_v4",), output)
+
+    with zipfile.ZipFile(output) as archive:
+        names = set(archive.namelist())
+        assert {
+            "controllers/centerline_v4.py",
+            "controllers/centerline/__init__.py",
+            "controllers/centerline/controller.py",
+            "controllers/centerline/drive.py",
+            "controllers/centerline/braking_tuned_parameters.py",
+        } <= names
 
 
 def test_minimum_only_submission_still_earns_all_minimum_points(monkeypatch: pytest.MonkeyPatch) -> None:
