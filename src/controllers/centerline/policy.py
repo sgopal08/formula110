@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from controllers.centerline.parameters import CenterlineParameters
 from controllers.centerline.state import CAMERA_HOLD_SECONDS, CenterlineState
 from racing import RobotCommand
+
+if TYPE_CHECKING:
+    from controllers.racing_line.planner import LineTarget
 
 WALL_DANGER_THRESHOLD_M: Final = 1.35
 WALL_EMERGENCY_THRESHOLD_M: Final = 0.72
@@ -34,12 +37,14 @@ class CenterlineExpert:
     def __init__(self, parameters: CenterlineParameters) -> None:
         self.parameters = parameters
 
-    def decide(self, state: CenterlineState) -> ExpertDecision:
+    def decide(self, state: CenterlineState, line_target: LineTarget | None = None) -> ExpertDecision:
         p = self.parameters
         if not state.camera_visible and state.camera_missing_seconds > CAMERA_HOLD_SECONDS:
             return ExpertDecision(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, RobotCommand(throttle=-0.2, steer=0.0))
 
-        center_steer = p.center_gain * state.center_offset_m
+        target_offset = 0.0 if line_target is None else line_target.desired_lateral_offset_m
+        line_error = state.center_offset_m + target_offset
+        center_steer = p.center_gain * line_error
         heading_steer = p.heading_gain * state.heading_error_degrees
         bend_steer = p.bend_gain * state.path_bend
         bend_change_steer = p.bend_change_gain * state.bend_change_per_m
@@ -51,7 +56,7 @@ class CenterlineExpert:
         target_speed = (
             p.straight_target_speed_mps
             - p.corner_speed_reduction_mps * corner_demand
-            - p.center_speed_penalty * abs(state.center_offset_m)
+            - p.center_speed_penalty * abs(state.center_offset_m if line_target is None else line_error)
             - p.heading_speed_penalty * abs(state.heading_error_degrees)
         )
         target_speed = _clamp(target_speed, minimum_corner_speed, p.straight_target_speed_mps)
@@ -65,7 +70,7 @@ class CenterlineExpert:
         throttle = _clamp(gain * speed_error, -0.8, 0.8)
         command = RobotCommand(throttle=throttle, steer=_clamp(steer, -1.0, 1.0))
         return ExpertDecision(
-            target_center_offset_m=0.0,
+            target_center_offset_m=target_offset,
             target_speed_mps=target_speed,
             center_steer=center_steer,
             heading_steer=heading_steer,

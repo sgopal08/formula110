@@ -212,6 +212,39 @@ def test_export_centerline_v4_includes_nested_helpers_and_parameters(tmp_path: P
         } <= names
 
 
+def test_export_racing_line_v3_includes_all_runtime_parameters(tmp_path: Path) -> None:
+    exporter = load_exporter()
+    output = tmp_path / "racing-line-v3.zip"
+
+    exporter.export_controllers(("controllers.racing_line_v3",), output)
+
+    with zipfile.ZipFile(output) as archive:
+        names = set(archive.namelist())
+        assert {
+            "controllers/racing_line_v3.py",
+            "controllers/racing_line/__init__.py",
+            "controllers/racing_line/planner.py",
+            "controllers/racing_line/parameters.py",
+            "controllers/racing_line/joint_tuned_parameters.py",
+            "controllers/centerline/controller.py",
+        } <= names
+
+
+def test_export_racing_line_v2_includes_planner_and_centerline_constants(tmp_path: Path) -> None:
+    exporter = load_exporter()
+    output = tmp_path / "racing-line-v2.zip"
+
+    exporter.export_controllers(("controllers.racing_line_v2",), output)
+
+    with zipfile.ZipFile(output) as archive:
+        names = set(archive.namelist())
+        assert {
+            "controllers/racing_line_v2.py",
+            "controllers/racing_line/planner_tuned_parameters.py",
+            "controllers/centerline/braking_tuned_parameters.py",
+        } <= names
+
+
 def test_minimum_only_submission_still_earns_all_minimum_points(monkeypatch: pytest.MonkeyPatch) -> None:
     builder = load_builder()
     grader = load_grader()
