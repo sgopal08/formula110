@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "architecture": "fixed-cmaes-policies-plus-8-reactive-parameters",
+  "parameters": [
+    1.3594101503731792,
+    -0.010869018814530534,
+    0.481391731832805,
+    0.13678674819649797,
+    -1.4986956877177313,
+    -0.5248740680177045,
+    -0.7000862032894258,
+    0.5998521809884071
+  ],
+  "metadata": {
+    "optimizer": "CMA-ES",
+    "optimizer_seed": 20260908,
+    "generations": 12,
+    "population": 10,
+    "source_experiment": "artifacts/cmaes-speed-hybrid",
+    "development_rank": 2,
+    "baseline_weight_sha256": {
+      "cmaes_racing_line_weights.json": "7872dc23157e2b17bc472e2acf8a731da99b134278f6330b11d806ae47074447",
+      "cmaes_weights_pre_racing_line.json": "deeeff5c5d06cda80eed0cd07ad318ec796c7dbaeac4c60307f6a83b3463d462"
+    },
+    "fresh_validation_seeds": [
+      3149,
+      3281,
+      3397,
+      3563,
+      3677,
+      3809,
+      3941,
+      4063,
+      4187,
+      4327,
+      4451,
+      4579,
+      4693,
+      4823,
+      4951,
+      5081,
+      5203,
+      5333,
+      5467,
+      5591
+    ],
+    "fresh_validation_runs": 20,
+    "official_runs": 2,
+    "stress_runs": 5,
+    "stress_seconds": 120,
+    "damage": 0.0,
+    "wall_contact_seconds": 0.0
+  }
+}
