@@ -27,8 +27,8 @@ class RacingLineController:
     """Use the fast evolved policy except near walls, where the safe champion takes over."""
 
     def __init__(self) -> None:
-        self._racing_line = _load_policy("cmaes_racing_line_weights.json")
-        self._safe_fallback = _load_policy("cmaes_weights_pre_racing_line.json")
+        self._racing_line = _load_policy("cmaes_v2_weights.json")
+        self._safe_fallback = _load_policy("cmaes_v1_weights.json")
 
     def __call__(self, sensors: RobotSensors) -> RobotCommand:
         clearances = tuple(sensors.wall_lidar.distance_at_angle_degrees(angle) for angle in SAFETY_LIDAR_ANGLES)

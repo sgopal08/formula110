@@ -28,12 +28,12 @@ We then changed only the final neural-network output bias controlling throttle. 
 POST_TRAINING_THROTTLE_BIAS_OFFSET = +0.15
 ```
 
-The final stored throttle-output bias changed from approximately `-1.38972` to `-1.23972`. The change was recorded in `cmaes_weights.json` metadata.
+The final stored throttle-output bias changed from approximately `-1.38972` to `-1.23972`. The change was recorded in `cmaes_v1_weights.json` metadata (formerly `cmaes_weights.json`).
 
 ## Evidence
 
 - **AI-agent assistance:** Benchmarked the original controller against `reactive_v1`; ran coarse and fine throttle-bias sweeps; compared distance, lap time, maximum speed, damage, contact, and off-track time; updated the saved artifact; and reran held-out and isolated official evaluations.
-- **Commits or code:** Updated `src/controllers/cmaes_weights.json`. The learned steering policy and controller source code were unchanged. No commit hash was available during this session.
+- **Commits or code:** Updated `src/controllers/cmaes_v1_weights.json` (formerly `cmaes_weights.json`). The learned steering policy and controller source code were unchanged. No commit hash was available during this session.
 - **Experiment configuration:** Seven evaluation seeds per candidate adjustment: held-out seeds 41, 137, 311, 509, and 887, plus official seeds 110 and 2026. Each trial lasted 30 seconds at 60 Hz with marshal recovery disabled.
 - **Experiment output:** The `+0.15` setting increased mean distance from 417.05 m to 436.95 m and reduced mean best-lap time from 10.986 seconds to 10.605 seconds across seven runs.
 - **Verification:** The final controller completed every training, validation, and official run with two laps, zero damage, zero wall contact, and no elimination. All 117 repository tests passed; new code continued to pass Ruff and strict Pyright checks.
